@@ -10,6 +10,7 @@
 class ObserverBase
 {
 	public:
+		virtual ~ObserverBase() = default;
 		virtual void initialize(const std::unique_ptr<OpenMM::System>&) = 0;
 		virtual void output(const std::size_t, const OpenMM::Context&) = 0;
 		virtual void finalize() const = 0;
@@ -24,7 +25,7 @@ class DCDObserver final : public ObserverBase
 
 		void initialize(const std::unique_ptr<OpenMM::System>& system_ptr) override;
 
-		void output(const std:;size_t step, const OpenMM::Context& context) override;
+		void output(const std::size_t step, const OpenMM::Context& context) override;
 
 		void finalize() const override { return; }
 
@@ -77,15 +78,15 @@ class EnergyObserver final : public ObserverBase
 };
 
 
-class MonteCarloResultObserver final : public ObserverBase
-{
-	public:
-		MonteCarloResultObserver(const std::string& file_prefix, const SystemGenerator& system_gen);
-		void initialize(const std::unique_ptr<OpenMM::System>&) override;
-		void output(const std::size_t step, const OpenMM::Context& context) override;
-		void finalize() const override { return; }
-		std::string name() const override { return "MonteCarloResultObserver"; }
-
-};
+//class MonteCarloResultObserver final : public ObserverBase
+//{
+//	public:
+//		MonteCarloResultObserver(const std::string& file_prefix, const SystemGenerator& system_gen);
+//		void initialize(const std::unique_ptr<OpenMM::System>&) override;
+//		void output(const std::size_t step, const OpenMM::Context& context) override;
+//		void finalize() const override { return; }
+//		std::string name() const override { return "MonteCarloResultObserver"; }
+//
+//};
 
 #endif // POLYMER_MCMD_OBSERVER_HPP

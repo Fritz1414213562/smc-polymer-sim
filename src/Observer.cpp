@@ -1,6 +1,7 @@
 #include "Observer.hpp"
 
 #include "util/Utility.hpp"
+#include "util/Logger.hpp"
 
 DCDObserver::DCDObserver(const std::string& file_prefix, const std::size_t total_step,
 	const std::size_t save_interval, const float delta_t, const bool use_periodic)
@@ -101,7 +102,7 @@ void DCDObserver::write_dcd_header(
 		const std::int32_t number_of_lines(1);
 		Utility::write_as_bytes(ofs, number_of_lines);
 
-		const char comment[80] = "MD-MC simulation of Polymer DNA model -- by Fritz Nagae 2025"
+		const char comment[80] = "MD-MC simulation of Polymer DNA model -- by Fritz Nagae 2025";
 		ofs.write(comment, 80);
 
 		Utility::write_as_bytes(ofs, block_size);
@@ -267,10 +268,10 @@ void EnergyObserver::write_energy(std::ofstream& ofs, int frame_num,
 		const std::size_t groupid = ffname_groupid.second;
 		const OpenMM::State state =
 			context.getState(OpenMM::State::Energy, false, int(1)<<groupid);
-		const double pot_ene = state.getPotentialEnergy() * OpenMM::KcalPerKj;
+		const double pot_ene = state.getPotentialEnergy() * OpenMM::KcalPerKJ;
 		ofs << ' ' << std::setw(24) << std::right << std::fixed << pot_ene;
 	}
 	const OpenMM::State state = context.getState(OpenMM::State::Energy);
-	const double kin_ene = state.getKineticEnergy() * OpenMM::KcalPerKj;
+	const double kin_ene = state.getKineticEnergy() * OpenMM::KcalPerKJ;
 	ofs << ' ' << std::setw(14) << std::right << std::fixed << kin_ene << std::endl;
 }
