@@ -14,16 +14,7 @@ class IntegratorGeneratorBase
 		virtual double temperature() const = 0;
 };
 
-template<
-	typename IntegratorType,
-	bool isExtended = std::is_base_of<OpenMM::Integrator, IntegratorType>::value>
 class IntegratorGenerator final: public IntegratorGeneratorBase
-{
-	static_assert(isExtended, "IntegratorType must be derived from OpenMM::Integrator")
-}
-
-template<typename IntegratorType>
-class IntegratorGenerator<IntegratorType, true> final: public IntegratorGeneratorBase
 {
   public:
 

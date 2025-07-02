@@ -2,13 +2,12 @@
 #include <fmt/core.h>
 
 
-template<typename IntegratorType>
 std::unique_ptr<OpenMM::Integrator> IntegratorGenerator::generate() const
 {
-	auto integrator = std::make_unique<IntegratorType>(
+	auto integrator = std::make_unique<OpenMM::LangevinIntegrator>(
 		this->temperature_,
 		this->friction_coeff_,
-		this->delta_t);
+		this->delta_t_);
 	integrator->setRandomNumberSeed(this->seed_);
 	return integrator;
 }
@@ -16,9 +15,9 @@ std::unique_ptr<OpenMM::Integrator> IntegratorGenerator::generate() const
 std::string IntegratorGenerator::dump_info() const
 {
 	std::string info;
-	info += fmt::format("    temperature           : {:10.2f} K\n",     this->temperature_);
-	info += fmt::format("    friction_gamma        : {:10.3f} ps^-1\n", this->friction_coeff_);
-	info += fmt::format("    delta_t (or tolerance): {:10.3f} ps\n", this->delta_t_);
+	info += fmt::format("    temperature    : {:10.2f} K\n",     this->temperature_);
+	info += fmt::format("    friction_gamma : {:10.3f} ps^-1\n", this->friction_coeff_);
+	info += fmt::format("    delta_t        : {:10.3f} ps\n", this->delta_t_);
 
 	std::string seed_info;
 	if (this->seed_ == 0)
