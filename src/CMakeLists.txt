@@ -13,17 +13,17 @@ set(OPENMM_PLUGIN_DIR ${EXPECTED_OPENMM_PLUGIN_DIR} CACHE PATH "The plugin path 
 message(STATUS "OpenMM plugin  path : ${OPENMM_PLUGIN_DIR}")
 
 # =============================================================================
-set(CMAKE_CXX_FLAGS "${OPEN_AICG2PLUS_WARNING_FLAGS} ${OPEN_AICG2PLUS_OPTIMIZATION_FLAGS} ${OPEN_AICG2PLUS_DEBUGGER_FLAGS} -DOPENMM_PLUGIN_DIR=${OPENMM_PLUGIN_DIR}")
+set(CMAKE_CXX_FLAGS "${POLYMER_MDMC_WARNING_FLAGS} ${POLYMER_MDMC_OPTIMIZATION_FLAGS} ${POLYMER_MDMC_DEBUGGER_FLAGS} -DOPENMM_PLUGIN_DIR=${OPENMM_PLUGIN_DIR}")
 message(STATUS "CXX compiler flags are ${CMAKE_CXX_FLAGS}")
 
-add_library(opencm STATIC
+add_library(mdmclib STATIC
     IntegratorGenerator.cpp
     Observer.cpp
     Simulator.cpp
     SystemGenerator.cpp
     Topology.cpp
     )
-target_link_libraries(opencm PRIVATE
+target_link_libraries(mdmclib PRIVATE
     OpenMM::OpenMM
     toml11::toml11
     fmt
@@ -37,8 +37,8 @@ target_link_libraries(mdmc PRIVATE
     OpenMM::OpenMM
     toml11::toml11
     fmt
-    opencm
+    mdmclib
     )
 add_subdirectory(util)
 add_subdirectory(input)
-add_subdirectory(forcefield)
+add_subdirectory(ff)
