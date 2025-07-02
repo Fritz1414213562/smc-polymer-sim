@@ -77,5 +77,4 @@ class Simulator
 		bool                                       output_progress_;
 		ProgressBar                                progress_bar_;
 };
-}
 #endif // POLYMER_MCMD_SIMULATOR_HPP
