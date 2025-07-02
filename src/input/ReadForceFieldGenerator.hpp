@@ -3,6 +3,7 @@
 
 #include "src/ff/HarmonicBondForceFieldGenerator.hpp"
 #include "src/ff/HarmonicAngleForceFieldGenerator.hpp"
+#include "src/ff/GrosbergAngleForceFieldGenerator.hpp"
 #include "src/ff/ExcludedVolumeForceFieldGenerator.hpp"
 #include "src/ff/PolynomialRepulsiveForceFieldGenerator.hpp"
 #include "src/ff/PullingForceFieldGenerator.hpp"
@@ -17,11 +18,18 @@
 
 HarmonicBondForceFieldGenerator
 read_harmonic_bond_ff_generator(
-        const toml::value& local_ff_data, Topology& topology, const bool use_periodic);
+        const toml::value& local_ff_data, Topology& topology,
+		const double temperature, const bool use_periodic);
 
 HarmonicAngleForceFieldGenerator
 read_harmonic_angle_ff_generator(
-        const toml::value& local_ff_data, Topology& topology, const bool use_periodic);
+        const toml::value& local_ff_data, Topology& topology,
+		const double temperature, const bool use_periodic);
+
+GrosbergAngleForceFieldGenerator
+read_grosberg_angle_ff_generator(
+		const toml::value& local_ff_data, Topology& topology,
+		const double temperature, const bool use_periodic);
 
 // ----------------------------------------------------------------------------
 // read global force field

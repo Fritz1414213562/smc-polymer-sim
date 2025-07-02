@@ -2,8 +2,6 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
-#include <toml.hpp>
-#include <iostream>
 
 
 namespace Utility
@@ -39,7 +37,7 @@ void clear_file(const std::string& filename)
 
 	if (! std::filesystem::exists(fpath))
 		std::filesystem::create_directories(fpath);
-	if (! std::filesystem::exists(fpath) || std::filesystem::is_directory(fpath))
+	if (! std::filesystem::exists(fpath) || ! std::filesystem::is_directory(fpath))
 		throw std::runtime_error(
 			"failed to make output directory: " + fpath.string());
 	std::ofstream ofs(filename);
@@ -48,6 +46,24 @@ void clear_file(const std::string& filename)
 	ofs.close();
 	return ;
 
+}
+
+const toml::value& find_either(const toml::value& v,
+        const std::string& key1, const std::string& key2)
+{
+    // A functor to find a value that corresponds to either of the key.
+    // If both key exists, throw an error.
+    if(v.contains(key1) && v.contains(key2) != 0)
+    {
+        std::cerr << toml::format_error("[error] key duplicates.", v.at(key1), "here", v.at(key2),
+                                        "this conflicts with the above value definition")
+                 << std::endl;
+    }
+    if(v.contains(key1)) { return v.at(key1); }
+    if(v.contains(key2)) { return v.at(key2); }
+
+    throw std::runtime_error(toml::format_error("both keys, \"" + key1 + "\" and \"" + key2 +
+                             "\", are not found.", v, "in this table"));
 }
 
 void merge_toml_tables(toml::value& table, const toml::value& other)

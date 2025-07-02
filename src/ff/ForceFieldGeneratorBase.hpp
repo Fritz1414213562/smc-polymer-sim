@@ -9,6 +9,7 @@
 class ForceFieldGeneratorBase
 {
   public:
+	virtual ~ForceFieldGeneratorBase() = default;
     virtual std::unique_ptr<OpenMM::Force> generate() const = 0;
     virtual std::string                    name()     const = 0;
 };

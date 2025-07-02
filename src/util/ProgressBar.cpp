@@ -3,7 +3,7 @@
 #include <array>
 #include <iostream>
 
-#include<cstdio>
+#include <cstdio>
 #include <cmath>
 
 

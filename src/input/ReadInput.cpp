@@ -1,7 +1,8 @@
-#include "ReadTOMLInput.hpp"
+#include "ReadInput.hpp"
 
 #include "src/util/Utility.hpp"
 #include "src/util/Logger.hpp"
+#include "src/util/Constants.hpp"
 
 #include "src/Simulator.hpp"
 #include "src/SystemGenerator.hpp"
@@ -66,9 +67,9 @@ SystemGenerator read_system(const toml::value& data)
                       << std::endl;
         }
 
-        const double xlength = (upper_bound[0] - lower_bound[0]) * OpenMM::NmPerAngstrom;
-        const double ylength = (upper_bound[1] - lower_bound[1]) * OpenMM::NmPerAngstrom;
-        const double zlength = (upper_bound[2] - lower_bound[2]) * OpenMM::NmPerAngstrom;
+        const double xlength = (upper_bound[0] - lower_bound[0]);// * OpenMM::NmPerAngstrom;
+        const double ylength = (upper_bound[1] - lower_bound[1]);// * OpenMM::NmPerAngstrom;
+        const double zlength = (upper_bound[2] - lower_bound[2]);// * OpenMM::NmPerAngstrom;
         system_gen.set_pbc(xlength, ylength, zlength);
     }
 
@@ -125,18 +126,43 @@ SystemGenerator read_system(const toml::value& data)
             const std::string potential   = toml::find<std::string>(local_ff, "potential");
             if(interaction == "BondLength" && potential == "Harmonic")
             {
+				if(!attr.contains("temperature"))
+            	{
+            	    throw std::runtime_error(
+            	        "[error] attributes table must contains temperature for PolynomialRepulsive");
+            	}
+            	const double temperature = toml::find<double>(attr, "temperature");
                 HarmonicBondForceFieldGenerator ff_gen =
                     read_harmonic_bond_ff_generator(
-                            local_ff, topology, use_periodic);
+                            local_ff, topology, temperature, use_periodic);
                 system_gen.add_ff_generator(
                         std::make_unique<HarmonicBondForceFieldGenerator>(ff_gen));
             }
             else if(interaction == "BondAngle" && potential == "Harmonic")
             {
+				if(!attr.contains("temperature"))
+            	{
+            	    throw std::runtime_error(
+            	        "[error] attributes table must contains temperature for PolynomialRepulsive");
+            	}
+            	const double temperature = toml::find<double>(attr, "temperature");
                 HarmonicAngleForceFieldGenerator ff_gen =
-                    read_harmonic_angle_ff_generator(local_ff, topology, use_periodic);
+                    read_harmonic_angle_ff_generator(local_ff, topology, temperature, use_periodic);
                 system_gen.add_ff_generator(
                         std::make_unique<HarmonicAngleForceFieldGenerator>(ff_gen));
+            }
+            else if(interaction == "BondAngle" && potential == "Grosberg")
+            {
+				if(!attr.contains("temperature"))
+            	{
+            	    throw std::runtime_error(
+            	        "[error] attributes table must contains temperature for PolynomialRepulsive");
+            	}
+            	const double temperature = toml::find<double>(attr, "temperature");
+                GrosbergAngleForceFieldGenerator ff_gen =
+                    read_grosberg_angle_ff_generator(local_ff, topology, temperature, use_periodic);
+                system_gen.add_ff_generator(
+                        std::make_unique<GrosbergAngleForceFieldGenerator>(ff_gen));
             }
         }
     }
@@ -211,7 +237,7 @@ read_integrator_gen(const toml::value& root)
 
     const auto& simulator   = toml::find(root, "simulator");
     const auto  delta_t     =
-        toml::find<double>(simulator, "delta_t") * Constant::cafetime; // [ps]
+        toml::find<double>(simulator, "delta_t"); // [ps]
 
     const auto  seed = toml::find_or<int>(simulator, "seed", 0);
 
@@ -223,11 +249,10 @@ read_integrator_gen(const toml::value& root)
     // We need to implement new LangevinIntegrator which can use different gamma
     // for different particles.
 
-    const auto  gamma_t =
-        toml::find_or<double>(simulator, "gamma_t", 0.01); // [1/cafetime]
-    const double friction_coeff = gamma_t / Constant::cafetime; // [1/ps]
+    const auto friction_coeff =
+        toml::find_or<double>(simulator, "gamma_t", 0.01);
 
-    return std::make_unique<LangevinIntegratorGenerator>(
+    return std::make_unique<IntegratorGenerator>(
             temperature, friction_coeff, delta_t, seed);
 }
 
@@ -244,9 +269,9 @@ std::vector<OpenMM::Vec3> read_initial_conf(const toml::value& data)
         const auto& p = particles.at(i);
         std::array<double, 3> vec = {0.0, 0.0, 0.0};
         vec = toml::get<std::array<double, 3>>(Utility::find_either(p, "pos", "position"));
-        initPosInNm[i] = OpenMM::Vec3(vec[0]*OpenMM::NmPerAngstrom,
-                                      vec[1]*OpenMM::NmPerAngstrom,
-                                      vec[2]*OpenMM::NmPerAngstrom); // location, nm
+        initPosInNm[i] = OpenMM::Vec3(vec[0], // *OpenMM::NmPerAngstrom,
+                                      vec[1], // *OpenMM::NmPerAngstrom,
+                                      vec[2]);// *OpenMM::NmPerAngstrom); // location, nm
     }
 
     return initPosInNm;
@@ -271,9 +296,9 @@ std::vector<OpenMM::Vec3> read_initial_vel(const toml::value& data)
                     toml::get<std::array<double, 3>>(
                             Utility::find_either(p, "vel", "velocity"));
                 initVelInNmPs[i] =
-                    OpenMM::Vec3(vec[0]*OpenMM::NmPerAngstrom,
-                                 vec[1]*OpenMM::NmPerAngstrom,
-                                 vec[2]*OpenMM::NmPerAngstrom);
+                    OpenMM::Vec3(vec[0], //*OpenMM::NmPerAngstrom,
+                                 vec[1], //*OpenMM::NmPerAngstrom,
+                                 vec[2]);//*OpenMM::NmPerAngstrom);
             }
             else
             {
@@ -305,8 +330,8 @@ Simulator read_input(const std::string& file_name)
 
     // read toml toml file
     std::cerr << "parsing " << file_name << "..." << std::endl;
-    auto data = toml::parse(toml_file_name);
-    expand_include(data);
+    auto data = toml::parse(file_name);
+    Utility::expand_include(data);
 
     // read files table
     const auto&        files         = toml::find(data, "files");

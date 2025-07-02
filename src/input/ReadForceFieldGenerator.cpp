@@ -21,9 +21,10 @@
 // ]
 HarmonicBondForceFieldGenerator
 read_harmonic_bond_ff_generator(
-        const toml::value& local_ff_data, Topology& topology, const bool use_periodic)
+        const toml::value& local_ff_data, Topology& topology,
+		const double temperature, const bool use_periodic)
 {
-    check_keys_available(local_ff_data,
+    Utility::check_keys_available(local_ff_data,
             {"interaction", "potential", "topology", "parameters", "env"});
 
     const auto& params = toml::find<toml::array>(local_ff_data, "parameters");
@@ -41,7 +42,7 @@ read_harmonic_bond_ff_generator(
         const auto offset =
             Utility::find_parameter_or<toml::value>(
                     param, env, "offset", toml::value(0));
-        add_offset(indices, offset);
+        Utility::add_offset(indices, offset);
 
         if(topology.size() <= indices.first)
         {
@@ -53,13 +54,19 @@ read_harmonic_bond_ff_generator(
         }
 
         const double v0 =
-            Utility::find_parameter<double>(param, env, "v0") * OpenMM::NmPerAngstrom; // nm
+            Utility::find_parameter<double>(param, env, "v0");// * OpenMM::NmPerAngstrom; // nm
         // Toml input file assume the potential formula of HarmonicBond is
         // "k*(r - r0)^2", but OpenMM HarmonicBond is "1/2*k*(r - r0)^2".
         // So we needs double the interaction coefficient `k`.
         const double k =
-            Utility::find_parameter<double>(param, env, "k") * OpenMM::KJPerKcal *
-            OpenMM::AngstromsPerNm * OpenMM::AngstromsPerNm * 2.0; // KJ/(mol nm^2)
+            Utility::find_parameter<double>(param, env, "k")// * OpenMM::KJPerKcal * 2.0; // KJ/mol
+				* 2.0
+				* Constant::kB // J/K
+				* Constant::Na // J/(K * mol)
+				* 1e-3         // kJ / (K * mol)
+				* temperature; // kJ / mol
+
+            //OpenMM::AngstromsPerNm * OpenMM::AngstromsPerNm * 2.0; // KJ/(mol nm^2)
 
         indices_vec.push_back(indices);
         v0s        .push_back(v0);
@@ -88,9 +95,10 @@ read_harmonic_bond_ff_generator(
 // ]
 HarmonicAngleForceFieldGenerator
 read_harmonic_angle_ff_generator(
-        const toml::value& local_ff_data, Topology& topology, const bool use_periodic)
+        const toml::value& local_ff_data, Topology& topology,
+		const double temperature, const bool use_periodic)
 {
-    check_keys_available(local_ff_data,
+    Utility::check_keys_available(local_ff_data,
             {"interaction", "potential", "topology", "parameters", "env"});
 
     const auto& params = toml::find<toml::array>(local_ff_data, "parameters");
@@ -108,7 +116,7 @@ read_harmonic_angle_ff_generator(
         const auto offset =
             Utility::find_parameter_or<toml::value>(
                     param, env, "offset", toml::value(0));
-        add_offset(indices, offset);
+        Utility::add_offset(indices, offset);
 
         for(auto idx : indices)
         {
@@ -135,7 +143,13 @@ read_harmonic_angle_ff_generator(
         // "1/2*k*(theta - theta0)^2". So we needs double the interaction
         // coefficient `k`.
         const double k =
-            Utility::find_parameter<double>(param, env, "k") * OpenMM::KJPerKcal * 2.0; // KJ/mol
+            Utility::find_parameter<double>(param, env, "k")// * OpenMM::KJPerKcal * 2.0; // KJ/mol
+				* 2.0
+				* Constant::kB // J/K
+				* Constant::Na // J/(K * mol)
+				* 1e-3         // kJ / (K * mol)
+				* temperature; // kJ / mol
+
 
         indices_vec.push_back(indices);
         v0s        .push_back(v0);
@@ -150,6 +164,89 @@ read_harmonic_angle_ff_generator(
     }
 
     return HarmonicAngleForceFieldGenerator(indices_vec, v0s, ks, use_periodic);
+}
+
+// GrosbergAngle input is like below
+// [[forcefields.local]]
+// interaction   = "BondAngle"
+// potential     = "Grosberg"
+// topology      = "angle"
+// parameters  = [
+//     {indices = [ 0, 1, 2], k = 1.0, v0 = 2.0},
+//     {indices = [ 3, 4, 5], k = 3.0, v0 = 4.0},
+//     {indices = [ 2, 6, 7], k = 5.0, v0 = 6.0}
+//     # ...
+// ]
+GrosbergAngleForceFieldGenerator
+read_grosberg_angle_ff_generator(
+        const toml::value& local_ff_data, Topology& topology,
+		const double temperature, const bool use_periodic)
+{
+    Utility::check_keys_available(local_ff_data,
+            {"interaction", "potential", "topology", "parameters", "env"});
+
+    const auto& params = toml::find<toml::array>(local_ff_data, "parameters");
+    const auto& env = local_ff_data.contains("env") ? local_ff_data.at("env") : toml::value{};
+
+    std::vector<std::array<std::size_t, 3>> indices_vec;
+    std::vector<double>                     v0s;
+    std::vector<double>                     ks;
+
+    for(const auto& param : params)
+    {
+        auto indices =
+            Utility::find_parameter<std::array<std::size_t, 3>>(
+                    param, env, "indices");
+        const auto offset =
+            Utility::find_parameter_or<toml::value>(
+                    param, env, "offset", toml::value(0));
+        Utility::add_offset(indices, offset);
+
+        for(auto idx : indices)
+        {
+            if(topology.size() <= idx)
+            {
+                throw std::runtime_error("[error] read_harmonic_angle_ff_generator : index "+std::to_string(idx)+" exceeds the system's largest index "+std::to_string(topology.size()-1)+".");
+            }
+        }
+
+        double v0 =
+            Utility::find_parameter<double>(param, env, "v0"); // radian
+        if(v0 < 0 || Constant::pi*2 < v0)
+        {
+            throw std::runtime_error("[error] read_harmonic_angle_ff_generator: "
+                "v0 must be between 0 and 2pi");
+        }
+        else if(Constant::pi < v0)
+        {
+            v0 = 2.0 * Constant::pi - v0;
+        }
+
+        // Toml input file assume the potential formula of HarmonicAngle is
+        // "k*(theta - theta0)^2", but OpenMM HarmonicAngle is
+        // "1/2*k*(theta - theta0)^2". So we needs double the interaction
+        // coefficient `k`.
+        const double k =
+            Utility::find_parameter<double>(param, env, "k")// * OpenMM::KJPerKcal * 2.0; // KJ/mol
+				* Constant::kB // J/K
+				* Constant::Na // J/(K * mol)
+				* 1e-3         // kJ / (K * mol)
+				* temperature; // kJ / mol
+
+
+        indices_vec.push_back(indices);
+        v0s        .push_back(v0);
+        ks         .push_back(k);
+    }
+
+    std::cerr << "    BondAngle     : Grosberg (" << indices_vec.size() << " found)" << std::endl;
+
+    if(local_ff_data.contains("topology"))
+    {
+        topology.add_edges(indices_vec, toml::find<std::string>(local_ff_data, "topology"));
+    }
+
+    return GrosbergAngleForceFieldGenerator(indices_vec, v0s, ks, use_periodic);
 }
 
 // ----------------------------------------------------------------------------
@@ -264,7 +361,7 @@ read_excluded_volume_ff_generator(
     const Topology& topology, const std::vector<std::optional<std::string>>& group_vec,
     const bool use_periodic)
 {
-    check_keys_available(global_ff_data,
+    Utility::check_keys_available(global_ff_data,
             {"interaction", "potential", "ignore", "env",
              "cutoff", "parameters", "epsilon"});
 
@@ -285,7 +382,7 @@ read_excluded_volume_ff_generator(
         const auto offset =
             Utility::find_parameter_or<toml::value>(
                     param, env, "offset", toml::value(0));
-        add_offset(index, offset);
+        Utility::add_offset(index, offset);
 
         if(topology.size() <= index)
         {
@@ -293,7 +390,7 @@ read_excluded_volume_ff_generator(
         }
 
         const double      radius =
-            Utility::find_parameter<double>(param, env, "radius") * OpenMM::NmPerAngstrom; // nm
+            Utility::find_parameter<double>(param, env, "radius");// * OpenMM::NmPerAngstrom; // nm
         radius_vec[index] = radius;
     }
 
@@ -334,7 +431,7 @@ read_polynomial_repulsive_ff_generator(
     const Topology& topology, const std::vector<std::optional<std::string>>& group_vec,
     const double temperature, const bool use_periodic)
 {
-    check_keys_available(global_ff_data,
+    Utility::check_keys_available(global_ff_data,
             {"interaction", "potential", "ignore", "env",
              "cutoff", "parameters", "epsilon"});
 
@@ -360,7 +457,7 @@ read_polynomial_repulsive_ff_generator(
         const auto offset =
             Utility::find_parameter_or<toml::value>(
                     param, env, "offset", toml::value(0));
-        add_offset(index, offset);
+        Utility::add_offset(index, offset);
 
         if(topology.size() <= index)
         {
@@ -368,7 +465,7 @@ read_polynomial_repulsive_ff_generator(
         }
 
         const double      radius =
-            Utility::find_parameter<double>(param, env, "radius") * OpenMM::NmPerAngstrom; // nm
+            Utility::find_parameter<double>(param, env, "radius");// * OpenMM::NmPerAngstrom; // nm
         radius_vec[index] = radius;
     }
 
@@ -408,7 +505,7 @@ read_pulling_ff_generator(
 {
     using parameter_type = PullingForceFieldGenerator::parameter_type;
 
-    check_keys_available(external_ff_data, {"interaction", "parameters", "env"});
+    Utility::check_keys_available(external_ff_data, {"interaction", "parameters", "env"});
 
     const auto& params = toml::find<toml::array>(external_ff_data, "parameters");
     const auto& env =
@@ -422,7 +519,7 @@ read_pulling_ff_generator(
         const auto offset =
             Utility::find_parameter_or<toml::value>(
                     param, env, "offset", toml::value(0));
-        add_offset(index, offset);
+        Utility::add_offset(index, offset);
         if(topology.size() <= index)
         {
             throw std::runtime_error("[error] read_pulling_ff_generator : index " +
@@ -435,7 +532,7 @@ read_pulling_ff_generator(
         for(std::size_t idx = 0; idx < 3; idx++)
         {
             force_kj_vec[idx] =
-                force_kcal_vec[idx] * OpenMM::KJPerKcal * OpenMM::AngstromsPerNm;
+                force_kcal_vec[idx] * OpenMM::KJPerKcal;// * OpenMM::AngstromsPerNm;
         }
         idx_force_vec.push_back({index, force_kj_vec});
     }

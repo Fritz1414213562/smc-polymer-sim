@@ -31,14 +31,14 @@ std::unique_ptr<OpenMM::Force> PolynomialRepulsiveForceFieldGenerator::generate(
 		"rsc12 = rsc2 * rsc2 * rsc2 * rsc2 * rsc2 * rsc2;"
 		"rsc2 = rsc * rsc;"
 		"rsc = r / sigma_sum * {id}_rmin12;"
-		"sigma_sum = {id}_sigma1 + {id}_sigma2;"
+		"sigma_sum = {id}_sigma1 + {id}_sigma2;",
 		fmt::arg("id", ffgen_id_));
 
 	auto exv_ff = std::make_unique<OpenMM::CustomNonbondedForce>(potential_formula);
 
 	exv_ff->addPerParticleParameter(fmt::format("{}_sigma", ffgen_id_));
-	exv_ff->addGlobalParameter("{}_rmin12", Constant::prexv_rmin12);
-	exv_ff->addGlobalParameter("{}_emin12", Constant::prexv_emin12);
+	exv_ff->addGlobalParameter(fmt::format("{}_rmin12", ffgen_id_), Constant::prexv_rmin12);
+	exv_ff->addGlobalParameter(fmt::format("{}_emin12", ffgen_id_), Constant::prexv_emin12);
 	exv_ff->addGlobalParameter(fmt::format("{}_epsilon", ffgen_id_), eps_);
 
 	double max_radius = std::numeric_limits<double>::min();
@@ -62,7 +62,7 @@ std::unique_ptr<OpenMM::Force> PolynomialRepulsiveForceFieldGenerator::generate(
 		}
 		else
 		{
-			exv->addParticle({std::numeric_limits<double>>::quiet_NaN()});
+			exv_ff->addParticle({std::numeric_limits<double>::quiet_NaN()});
 		}
 	}
 
