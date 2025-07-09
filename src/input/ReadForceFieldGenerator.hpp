@@ -6,7 +6,9 @@
 #include "src/ff/GrosbergAngleForceFieldGenerator.hpp"
 #include "src/ff/ExcludedVolumeForceFieldGenerator.hpp"
 #include "src/ff/PolynomialRepulsiveForceFieldGenerator.hpp"
+#include "src/ff/PositionRestraintForceFieldGenerator.hpp"
 #include "src/ff/PullingForceFieldGenerator.hpp"
+#include "src/ff/SegmentParallelizationForceFieldGenerator.hpp"
 
 #include "src/Topology.hpp"
 #include "src/util/Utility.hpp"
@@ -28,6 +30,11 @@ read_harmonic_angle_ff_generator(
 
 GrosbergAngleForceFieldGenerator
 read_grosberg_angle_ff_generator(
+		const toml::value& local_ff_data, Topology& topology,
+		const double temperature, const bool use_periodic);
+
+SegmentParallelizationForceFieldGenerator
+read_segment_parallelization_ff_generator(
 		const toml::value& local_ff_data, Topology& topology,
 		const double temperature, const bool use_periodic);
 
@@ -59,5 +66,10 @@ PullingForceFieldGenerator
 read_pulling_ff_generator(
         const toml::value& external_ff_data, const Topology& topology,
         const bool use_periodic);
+
+PositionRestraintForceFieldGenerator
+read_position_restraint_ff_generator(
+	const toml::value& external_ff_data, const Topology& topology,
+	const bool use_periodic);
 
 #endif // POLYMER_MDMC_READ_TOML_FORCE_FIELD_GENERATOR_HPP

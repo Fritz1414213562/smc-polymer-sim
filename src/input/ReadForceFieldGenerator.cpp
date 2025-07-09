@@ -249,6 +249,94 @@ read_grosberg_angle_ff_generator(
     return GrosbergAngleForceFieldGenerator(indices_vec, v0s, ks, use_periodic);
 }
 
+// Segment Parallelization input is like below
+// [[forcefields.local]]
+// interaction = "BondLength"
+// potential   = "SegmentParallelization"
+// topology    = "bond"
+// parameters  = [
+//     {indices = [ 0, 1, 10, 11], v0 = 1.0, bond_k =  2.0, theta0 =  3.0, dihedral_k =  4.0},
+//     {indices = [ 4, 5, 24, 25], v0 = 5.0, bond_k =  6.0, theta0 =  7.0, dihedral_k =  8.0},
+//     {indices = [ 8, 9, 38, 39], v0 = 9.0, bond_k = 10.0, theta0 = 11.0, dihedral_k = 12.0}
+//     # ...
+// ]
+SegmentParallelizationForceFieldGenerator
+read_segment_parallelization_ff_generator(
+        const toml::value& local_ff_data, Topology& topology,
+		const double temperature, const bool use_periodic)
+{
+    Utility::check_keys_available(local_ff_data,
+            {"interaction", "potential", "topology", "parameters", "env"});
+
+    const auto& params = toml::find<toml::array>(local_ff_data, "parameters");
+    const auto& env = local_ff_data.contains("env") ? local_ff_data.at("env") : toml::value{};
+
+    std::vector<std::array<std::size_t, 4>> indices_vec;
+    std::vector<double>                             v0s;
+    std::vector<double>                         theta0s;
+    std::vector<double>                         bond_ks;
+    std::vector<double>                     dihedral_ks;
+
+    for(const auto& param : params)
+    {
+        auto indices =
+            Utility::find_parameter<std::array<std::size_t, 4>>(
+                    param, env, "indices");
+        const auto offset =
+            Utility::find_parameter_or<toml::value>(
+                    param, env, "offset", toml::value(0));
+        Utility::add_offset(indices, offset);
+
+		for (const auto& index : indices)
+		{
+			if(topology.size() <= index)
+        	{
+        	    throw std::runtime_error("[error] read_segment_parallelization_ff_generator : "
+					"index " + std::to_string(index)
+					+ " exceeds the system's largest index "
+					+ std::to_string(topology.size()-1)+".");
+        	}
+        }
+
+        const double v0 =
+            Utility::find_parameter<double>(param, env, "v0");
+		const double theta0 =
+			Utility::find_parameter<double>(param, env, "theta0");
+        // Toml input file assume the potential formula of HarmonicBond is
+        // "k*(r - r0)^2", but OpenMM HarmonicBond is "1/2*k*(r - r0)^2".
+        // So we needs double the interaction coefficient `k`.
+        const double bond_k =
+            Utility::find_parameter<double>(param, env, "bond_k")
+				* Constant::kB // J/K
+				* Constant::Na // J/(K * mol)
+				* 1e-3         // kJ / (K * mol)
+				* temperature; // kJ / mol
+		const double dihedral_k =
+			Utility::find_parameter<double>(param, env, "dihedral_k")
+				* Constant::kB
+				* Constant::Na
+				* 1e-3
+				* temperature;
+
+        indices_vec.push_back(indices);
+        v0s        .push_back(v0);
+        theta0s    .push_back(theta0);
+        bond_ks    .push_back(bond_k);
+        dihedral_ks.push_back(dihedral_k);
+    }
+
+    if(local_ff_data.contains("topology"))
+    {
+        topology.add_edges(indices_vec, toml::find<std::string>(local_ff_data, "topology"));
+    }
+
+    std::cerr << "    BondLength    : SegmentParallelization ("
+			  << indices_vec.size() << " found)" << std::endl;
+    return SegmentParallelizationForceFieldGenerator(
+		indices_vec, bond_ks, dihedral_ks, v0s, theta0s, use_periodic);
+}
+
+
 // ----------------------------------------------------------------------------
 // read global force field
 
@@ -541,5 +629,63 @@ read_pulling_ff_generator(
               << " found)" << std::endl;
 
     return PullingForceFieldGenerator(idx_force_vec, use_periodic);
+}
+
+// PositionRestraint input is like below
+// [[forcefields.external]]
+// interaction = "PositionRestraint"
+// potential   = "Harmonic"
+// parameters = [
+//     {index = 0, position = [0.0, 0.0, 0.0], k = 0.1, v0 = 10.0},
+//     # ...
+// ]
+PositionRestraintForceFieldGenerator
+read_position_restraint_ff_generator(
+        const toml::value& external_ff_data, const Topology& topology,
+        const bool use_periodic)
+{
+    Utility::check_keys_available(external_ff_data,
+            {"interaction", "potential", "parameters", "env"});
+
+    const auto& params = toml::find<toml::array>(external_ff_data, "parameters");
+    const auto& env =
+        external_ff_data.contains("env") ? external_ff_data.at("env") : toml::value{};
+
+    std::vector<std::size_t>           indices;
+    std::vector<std::array<double, 3>> positions;
+    std::vector<double>                ks;
+    std::vector<double>                v0s;
+    for(const auto& param : params)
+    {
+        std::size_t index =
+            Utility::find_parameter<std::size_t>(param, env, "index");
+        const auto offset =
+            Utility::find_parameter_or<toml::value>(
+                    param, env, "offset", toml::value(0));
+        Utility::add_offset(index, offset);
+        if(topology.size() <= index)
+        {
+            throw std::runtime_error(
+                "[error] read_toml_position_restraint_ff_generator : index " +
+                std::to_string(index) + " exceeds the system's largest index " +
+                std::to_string(topology.size()-1) + ".");
+        }
+        const std::array<double, 3> position =
+            Utility::find_parameter<std::array<double, 3>>(param, env, "position"); // [nm]
+        const double k =
+            Utility::find_parameter<double>(param, env, "k" );
+        const double v0 =
+            Utility::find_parameter<double>(param, env, "v0"); // [Nm]
+
+        indices  .push_back(index);
+        positions.push_back(position);
+        ks       .push_back(k);
+        v0s      .push_back(v0);
+    }
+
+    std::cerr << "    External      : PositionRestraint (" << params.size()
+              << " found)" << std::endl;
+
+    return PositionRestraintForceFieldGenerator(indices, positions, ks, v0s, use_periodic);
 }
 
