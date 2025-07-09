@@ -129,7 +129,7 @@ SystemGenerator read_system(const toml::value& data)
 				if(!attr.contains("temperature"))
             	{
             	    throw std::runtime_error(
-            	        "[error] attributes table must contains temperature for PolynomialRepulsive");
+            	        "[error] attributes table must contains temperature for Harmonic Bond");
             	}
             	const double temperature = toml::find<double>(attr, "temperature");
                 HarmonicBondForceFieldGenerator ff_gen =
@@ -138,12 +138,26 @@ SystemGenerator read_system(const toml::value& data)
                 system_gen.add_ff_generator(
                         std::make_unique<HarmonicBondForceFieldGenerator>(ff_gen));
             }
+			else if(interaction == "BondLength" && potential == "SegmentParallelization")
+			{
+				if(!attr.contains("temperature"))
+				{
+					throw std::runtime_error(
+						"[error] attributes table must contains temperature for Seg.Para.");
+				}
+				const double temperature = toml::find<double>(attr, "temperature");
+				SegmentParallelizationForceFieldGenerator ff_gen =
+					read_segment_parallelization_ff_generator(
+						local_ff, topology, temperature, use_periodic);
+				system_gen.add_ff_generator(
+						std::make_unique<SegmentParallelizationForceFieldGenerator>(ff_gen));
+			}
             else if(interaction == "BondAngle" && potential == "Harmonic")
             {
 				if(!attr.contains("temperature"))
             	{
             	    throw std::runtime_error(
-            	        "[error] attributes table must contains temperature for PolynomialRepulsive");
+            	        "[error] attributes table must contains temperature for Harmonic Angle");
             	}
             	const double temperature = toml::find<double>(attr, "temperature");
                 HarmonicAngleForceFieldGenerator ff_gen =
@@ -156,7 +170,7 @@ SystemGenerator read_system(const toml::value& data)
 				if(!attr.contains("temperature"))
             	{
             	    throw std::runtime_error(
-            	        "[error] attributes table must contains temperature for PolynomialRepulsive");
+            	        "[error] attributes table must contains temperature for Grosberg Angle");
             	}
             	const double temperature = toml::find<double>(attr, "temperature");
                 GrosbergAngleForceFieldGenerator ff_gen =
@@ -220,6 +234,13 @@ SystemGenerator read_system(const toml::value& data)
                 system_gen.add_ff_generator(
                     std::make_unique<PullingForceFieldGenerator>(ff_gen));
             }
+			else if(interaction == "PositionRestraint")
+			{
+				PositionRestraintForceFieldGenerator ff_gen =
+					read_position_restraint_ff_generator(external_ff, topology, use_periodic);
+				system_gen.add_ff_generator(
+					std::make_unique<PositionRestraintForceFieldGenerator>(ff_gen));
+			}
         }
     }
 
