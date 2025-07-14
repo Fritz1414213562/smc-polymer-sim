@@ -17,9 +17,8 @@ class SegmentParallelizationForceFieldGenerator final : public ForceFieldGenerat
 		SegmentParallelizationForceFieldGenerator(
 			const std::vector<indices_type>& indices_vec,
 			const std::vector<double> bond_ks, const std::vector<double> dihedral_ks,
-			const std::vector<double> bond_lengths, const std::vector<double> phi_0s,
-			const std::vector<double> psi_0s, const std::vector<double> phases,
-			const bool use_periodic);
+			const std::vector<double> bond_lengths, const std::vector<double> phi0s,
+			const std::vector<double> phases, const bool use_periodic);
 
 		std::unique_ptr<OpenMM::Force> generate() const override;
 
@@ -32,13 +31,15 @@ class SegmentParallelizationForceFieldGenerator final : public ForceFieldGenerat
 		std::vector<double>       bond_ks_;
 		std::vector<double>       dihedral_ks_;
 		std::vector<double>       bond_lengths_;
-		std::vector<double>       phi_0s_;
-		std::vector<double>       psi_0s_;
+		std::vector<double>       phi0s_;
 		std::vector<double>       phases_;
 		bool                      use_periodic_;
 		std::string               ffgen_id_;
 		std::string potential_formula_ =
-			"{id}_bond_k * (r - {id}_r0)^2 + {id}_bond_k * (phi - {id}_phi0)^2 + {id}_bond_k * (psi - {id}_psi0)^2 + {id}_dihd_k * (1 - cos(2 * (theta - {id}_theta0)));"
+			"Ub + Ua + Ud;"
+			"Ud = {id}_dihd_k * (1 - cos(2 * (theta - {id}_theta0)));"
+			"Ua = {id}_dihd_k * (1 - cos(2 * (phi - psi - {id}_phi0)));"
+			"Ub = {id}_bond_k * (r - {id}_r0)^2;"
 			"phi = angle(p2, p1, p3);"
 			"psi = angle(p1, p3, p4);"
 			"r = distance(p1, p3);"

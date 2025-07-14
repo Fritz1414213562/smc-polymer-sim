@@ -277,7 +277,6 @@ read_segment_parallelization_ff_generator(
     std::vector<double>                         bond_ks;
     std::vector<double>                     dihedral_ks;
 	std::vector<double>                           phi0s;
-	std::vector<double>                           psi0s;
 
     for(const auto& param : params)
     {
@@ -321,8 +320,6 @@ read_segment_parallelization_ff_generator(
 				* temperature;
 		const double phi0 =
 			Utility::find_parameter<double>(param, env, "phi0");
-		const double psi0 =
-			Utility::find_parameter<double>(param, env, "psi0");
 
         indices_vec.push_back(indices);
         v0s        .push_back(v0);
@@ -330,7 +327,6 @@ read_segment_parallelization_ff_generator(
         bond_ks    .push_back(bond_k);
         dihedral_ks.push_back(dihedral_k);
 		phi0s      .push_back(phi0);
-		psi0s      .push_back(psi0);
     }
 
     if(local_ff_data.contains("topology"))
@@ -341,7 +337,7 @@ read_segment_parallelization_ff_generator(
     std::cerr << "    BondLength    : SegmentParallelization ("
 			  << indices_vec.size() << " found)" << std::endl;
     return SegmentParallelizationForceFieldGenerator(
-		indices_vec, bond_ks, dihedral_ks, v0s, phi0s, psi0s, theta0s, use_periodic);
+		indices_vec, bond_ks, dihedral_ks, v0s, phi0s, theta0s, use_periodic);
 }
 
 
