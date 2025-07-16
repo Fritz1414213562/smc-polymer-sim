@@ -4,15 +4,17 @@
 SegmentParallelizationForceFieldGenerator::SegmentParallelizationForceFieldGenerator(
 	const std::vector<indices_type>& indices_vec, const std::vector<double> bond_ks,
 	const std::vector<double> dihedral_ks, const std::vector<double> bond_lengths,
-	const std::vector<double> phi0s, const std::vector<double> phases, const bool use_periodic)
+	const std::vector<double> sigmas, const std::vector<double> phi0s,
+	const std::vector<double> phases, const bool use_periodic)
 	: indices_vec_(indices_vec), bond_ks_(bond_ks), dihedral_ks_(dihedral_ks),
-	  bond_lengths_(bond_lengths), phi0s_(phi0s),
+	  bond_lengths_(bond_lengths), sigmas_(sigmas), phi0s_(phi0s),
 	  phases_(phases), use_periodic_(use_periodic),
 	  ffgen_id_(fmt::format("SGP{}", ffid.gen()))
 {
 	if ( !(indices_vec_.size() == bond_ks_.size()
 		&& indices_vec_.size() == dihedral_ks_.size()
 		&& indices_vec_.size() == bond_lengths_.size()
+		&& indices_vec_.size() == sigmas_.size()
 		&& indices_vec_.size() == phi0s_.size()
 		&& indices_vec_.size() == phases_.size()))
 	{
@@ -23,6 +25,7 @@ SegmentParallelizationForceFieldGenerator::SegmentParallelizationForceFieldGener
 			   "bond_ks  ("     << bond_ks_.size()      << "), "
 			   "dihedral_ks  (" << dihedral_ks_.size()  << "), "
 			   "bond_lengths (" << bond_lengths_.size() << "), "
+			   "sigmas       (" << sigmas_.size()       << "), "
 			   "phi0s        (" << phi0s_.size()        << "), "
 			   "phases       (" << phases_.size()       << ") is not matched."
 			<< "The number of these parameters must be the same.";
@@ -37,6 +40,7 @@ std::unique_ptr<OpenMM::Force> SegmentParallelizationForceFieldGenerator::genera
 	bond_ff->setUsesPeriodicBoundaryConditions(use_periodic_);
 	bond_ff->addPerBondParameter(fmt::format("{}_bond_k", ffgen_id_));
 	bond_ff->addPerBondParameter(fmt::format("{}_r0",     ffgen_id_));
+	bond_ff->addPerBondParameter(fmt::format("{}_sigma",  ffgen_id_));
 	bond_ff->addPerBondParameter(fmt::format("{}_dihd_k", ffgen_id_));
 	bond_ff->addPerBondParameter(fmt::format("{}_phi0",   ffgen_id_));
 	bond_ff->addPerBondParameter(fmt::format("{}_theta0", ffgen_id_));
@@ -45,8 +49,8 @@ std::unique_ptr<OpenMM::Force> SegmentParallelizationForceFieldGenerator::genera
 	{
 		const std::array<std::size_t, 4>& pairs = indices_vec_[idx];
 		bond_ff->addBond({pairs.begin(), pairs.end()},
-			{bond_ks_[idx], bond_lengths_[idx], dihedral_ks_[idx],
-			 phi0s_[idx], phases_[idx]});
+			{bond_ks_[idx], bond_lengths_[idx], sigmas_[idx],
+			 dihedral_ks_[idx], phi0s_[idx], phases_[idx]});
 	}
 	return bond_ff;
 }
