@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <limits>
+#include <cmath>
 
 // The size of the vector representing the per-particle parameters
 // (in this case, radii) must match the system size. This must be guaranteed
