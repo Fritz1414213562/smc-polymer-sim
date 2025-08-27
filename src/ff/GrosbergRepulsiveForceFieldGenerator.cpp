@@ -5,7 +5,6 @@
 
 #include <iostream>
 #include <limits>
-#include <cmath>
 
 // The size of the vector representing the per-particle parameters
 // (in this case, radii) must match the system size. This must be guaranteed
@@ -81,7 +80,7 @@ std::unique_ptr<OpenMM::Force> GrosbergRepulsiveForceFieldGenerator::generate() 
 	}
 
 	// set cutoff
-	const double cutoff_distance   = (max_radius + second_max_radius)*std::powf(2.0, 1.0/6.0);
+	const double cutoff_distance   = (max_radius + second_max_radius)*std::pow(2.0, 1.0/6.0);
 	std::cerr << "	  GrosbergRepulsiveExcludedVolume      : cutoff disntace is "
 			  << cutoff_distance << " nm" << std::endl;
 	exv_ff->setCutoffDistance(cutoff_distance);
