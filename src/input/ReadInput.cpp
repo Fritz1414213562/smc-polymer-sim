@@ -216,6 +216,20 @@ SystemGenerator read_system(const toml::value& data)
 				system_gen.add_ff_generator(
 						std::make_unique<PolynomialRepulsiveForceFieldGenerator>(ff_gen));
 			}
+			else if (potential == "GrosbergRepulsive")
+			{
+				if(!attr.contains("temperature"))
+            	{
+            	    throw std::runtime_error(
+            	        "[error] attributes table must contains temperature for GrosbergRepulsive");
+            	}
+            	const double temperature = toml::find<double>(attr, "temperature");
+				GrosbergRepulsiveForceFieldGenerator ff_gen =
+					read_grosberg_repulsive_ff_generator(
+						global_ff, system_size, topology, group_vec, temperature, use_periodic);
+				system_gen.add_ff_generator(
+						std::make_unique<GrosbergRepulsiveForceFieldGenerator>(ff_gen));
+			}
         }
     }
 

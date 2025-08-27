@@ -4,6 +4,7 @@
 #include "src/ff/HarmonicBondForceFieldGenerator.hpp"
 #include "src/ff/HarmonicAngleForceFieldGenerator.hpp"
 #include "src/ff/GrosbergAngleForceFieldGenerator.hpp"
+#include "src/ff/GrosbergRepulsiveForceFieldGenerator.hpp"
 #include "src/ff/ExcludedVolumeForceFieldGenerator.hpp"
 #include "src/ff/PolynomialRepulsiveForceFieldGenerator.hpp"
 #include "src/ff/PositionRestraintForceFieldGenerator.hpp"
@@ -52,6 +53,12 @@ read_excluded_volume_ff_generator(
     const toml::value& global_ff_data, const std::size_t system_size,
     const Topology& topology, const std::vector<std::optional<std::string>>& group_vec,
     const bool use_periodic);
+
+GrosbergRepulsiveForceFieldGenerator
+read_grosberg_repulsive_ff_generator(
+	const toml::value& global_ff_data, const std::size_t system_size,
+	const Topology& topology, const std::vector<std::optional<std::string>>& group_vec,
+	const double temperature, const bool use_periodic);
 
 PolynomialRepulsiveForceFieldGenerator
 read_polynomial_repulsive_ff_generator(
