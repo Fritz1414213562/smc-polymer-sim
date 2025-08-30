@@ -25,7 +25,9 @@ GrosbergRepulsiveForceFieldGenerator::GrosbergRepulsiveForceFieldGenerator(
 std::unique_ptr<OpenMM::Force> GrosbergRepulsiveForceFieldGenerator::generate() const
 {
 	const std::string potential_formula = fmt::format(
-		"{id}_epsilon * (r12 - r6) + {id}_epsilon;"
+		"U * rect_r;"
+		"rect_r = step(sigma_sum * {id}_sigma_factor - r);"
+		"U = {id}_epsilon * (r12 - r6) + {id}_epsilon;"
 		"r12 = r6 * r6;"
 		"r6 = rrev * rrev * rrev * rrev * rrev * rrev;"
 		"rrev = sigma_sum / r;"
@@ -36,6 +38,7 @@ std::unique_ptr<OpenMM::Force> GrosbergRepulsiveForceFieldGenerator::generate() 
 
 	exv_ff->addPerParticleParameter(fmt::format("{}_sigma", ffgen_id_));
 	exv_ff->addGlobalParameter(fmt::format("{}_epsilon", ffgen_id_), eps_);
+	exv_ff->addGlobalParameter(fmt::format("{}_sigma_factor", ffgen_id_), std::pow(2.0, 1.0/6.0));
 
 	double max_radius = std::numeric_limits<double>::min();
 	double second_max_radius = std::numeric_limits<double>::min();
