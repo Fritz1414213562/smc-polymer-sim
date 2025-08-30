@@ -314,11 +314,7 @@ read_segment_parallelization_ff_generator(
 				* 1e-3         // kJ / (K * mol)
 				* temperature; // kJ / mol
 		const double dihedral_k =
-			Utility::find_parameter<double>(param, env, "dihedral_k")
-				* Constant::kB
-				* Constant::Na
-				* 1e-3
-				* temperature;
+			Utility::find_parameter<double>(param, env, "dihedral_k");
 		const double phi0 =
 			Utility::find_parameter<double>(param, env, "phi0");
 		const double sigma =
